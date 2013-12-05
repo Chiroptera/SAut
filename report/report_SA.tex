@@ -57,11 +57,11 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 %Our motivation was to have a receptionist robot, capable of greeting visitors in a big building such as an office block. The robot would be capable of mapping the building \emph{a priori}, receive a set of known coordinates such as people's offices associated with keywords, interact with users through speech synthesis and voice recognition and  guide visitors to their desired destinations.
 
 %During the implementation of the project we simplified on some of these functionalaties, e.g. mapping only the fifth floor of the IST's North Tower and the voice commands were only single word phrases - mostly numbers.
- 
+
 \hfill December 6, 2013
 
 \section{Algoritmos e Implementação}
-%Methods and Algorithms (brief explanation of the methods used and ROS packages/algorithms used - this is mainly to make sure you understood the conceptual and the implementation part, and to introduce notation - do not write like in a book or tutorial paper) 
+%Methods and Algorithms (brief explanation of the methods used and ROS packages/algorithms used - this is mainly to make sure you understood the conceptual and the implementation part, and to introduce notation - do not write like in a book or tutorial paper)
 
 \subsection{Mapeamento}
 %gmapping - mapping and SLAM using odometry
@@ -73,17 +73,17 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 	\\
 	Hokuyo node:
 	\\
-	The Hokuyo node obtain the data of Hokuyo connected to the computer and 
+	The Hokuyo node obtain the data of Hokuyo connected to the computer and
 	publishe in topic scan.
 	\\
-	
+
 	Gmapping:
 	\\
 	The gmapping get the information in topics tf and scan. The topic tf transforms necessary to relate frames for laser, base, and odometry. The topic scan transforms Laser scans to create the map from.
 	The gmapping give the topic map for creating the map.
 	\\
-	
-	
+
+
 	Initial Map creating in gmapping
 	\begin{figure}[[ht]]
 	\centering
@@ -107,7 +107,7 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 % - move\_base
 % - local planner
 % - global planner
- 
+
 	For doing the Navigation the used commands gived by the user
 	\\
 	\\
@@ -115,18 +115,18 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 	\\
 	\\
 	The pose have tree parameters: x, y , $\theta$
-	
-	
-	
-	
+
+
+
+
 	Algorithm:
-	
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
+
 	We use Rosaria to obtain odometry information for doing the localization in the map, the odometry information obtain in topic pose published by Rosaria.
 	Another thing we use Rosaria is for reading the sonar, give by the topic sonar.
 	\\
@@ -136,7 +136,7 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 
 %smach - finite state automaton
 % - actionlib
- 
+
 In order to coordinate the robot's actions, an abstract representation of the task to be carried out is needed. The receptionist robot is a sequential system, \textit{i.e.}, it performs one action at a time -- either moving to a target location or interacting with a user to acquire one. For such a system, a State Machine (SM), or Finite State Automaton (FSA) is usually used to specify the control flow through the system.
 
 A SM is implemented using the \textit{smach} package. The task of the robot is divided into three states:
@@ -146,11 +146,61 @@ A SM is implemented using the \textit{smach} package. The task of the robot is d
 	\item GET\_GOAL
 \end{itemize}
 
-\subsection{Interacção com o Utilizador}
+\subsection{Interacção com o utilizador}
+
+A interacção com utilizadores foi feita com recurso a reconhecimento e síntese de voz. Para o primeiro, foram testados duas soluções com características muito distintas. Para o último, foi utilizado um síntetizador de som com capacidade de síntetizar voz a partir de um texto recebido.
+
+\subsubsection{Reconhecimento de voz}
+
+Para compreender como é que o reconhecimento de voz é realizado é necessário introduzir alguns conceitos importantes. A unidade básica da fala é entendida como um fone. Contudo, as características acústicas correspondentes a um fone variam conforme o contexto em que esse fone aparece, a pessoa, etc. Devido a estas variações  utilizam-se subestados dentro de um fone para melhorar o reconhecimento. Usa-se, também, o contexto em que os fones aparecem, o que se irá traduzir num problema de procura do contexto que melhor se aproxima dos dados recebidos. Os fones constróem sílabas. Dependendo das condições de fala, a mesma sílaba correponde a diferenes fones. Palavras restringem considerávelmente a quantidade de fones que se têm de comparar e quanto menor for o dicionário mais rápido será o reconhecimento.
+
+Uma das soluções testadas foi a livraria Pocketsphinx da plataforma Sphinx. Esta livraria, disponível num pacote do ROS com o mesmo nome, está optimizada para portabilidade que é exactamente o que pretendemos na implementação num robô. A plataforma Sphinx utiliza algoritmos extensivamente utilizados em investigação baseados em \textit{Hidden Markov Models} (HMM). Os principais componentes do processo de reconhecimento de voz esão representados na Figura \ref{fig:voicerecprocess}.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=21pc]{voice_rec_process.png}
+  \caption{Principais componentes do processo de reconhecimento de fala.}
+  \label{fig:voicerecprocess}
+\end{figure}
+
+O audio recebido pelo microfone é convertido em numa sequência de vectores acústicos $Y_{1:T}=y_1,...,y_T$, num processo denominado de extração de \textit{features}. Os números dos vectores são baseados nas propriedades acústicas da fração correspondente da sequência. Depois desta extração, o descodificador tenta encontrar a sequência de palavras $w_{1:L}=w_1,...,w_L$ que é mais provável ter estado na origem de $Y$, i.e.,
+
+%fix equation
+\begin{equation}
+  w=arg max \{ P(w|Y) \}
+\label{eq:word_best_match}
+\end{equation}
+
+No entanto, $P(w|Y)$ é difícil de modelar directamente, pelo que se utiliza a regra de Bayes para transformar \ref{eq:word_best_match} no equivalente:
+
+\begin{eqnarray}
+  \label{eq:word_bm_equi}
+  w = arg max \{ P(Y|w) P(w) \}
+\end{eqnarray}
+
+A complexidade da implementação dos algoritmos nesta plataforma  é algo que não foi explorado na implementação do projecto, mas segue o processo descrito nos parágrafos anteriores.
+
+O reconhecimento é feito a partir de uma amostra que é separada em diferentes partes por silêncios ou pausas e depois tenta-se identificar o que é dito em cada uma dessas partes comparando com todas as combinações de palavras. O resultado é a melhor combinação possível. Esta comparação tem em conta três conceitos importantes. O primeiro é o de \textit{features} - a fala é dividida em pequenas partes (frações de segundo) e de cada parte é exradido um conjunto de números designado por vector de \textit{features}. O segundo é o modelo utilizado - objecto matemático que codifica propriedades da fala, normalmento baseado no especto. Por último, é o processo de procura em si, que pode ser mais ou menos simplificado para devolver resultados em tempos com utilização prática. A forma como o vector de \textit{features} é calculado, o quão o modelo utilizado se aproxima da realidade e o uso ou não de simplificações ou optimizações do processo de procura vão influenciar a qualidade do reconhecimento de fala.
+
+
+
+
+
+Uma das soluções testadas para reconhecimento de voz foi um \textit{wraper} do \emph{Google Speech API}. Esta solução tem a grande vantagem de nos dar acesso a uma plataforma poderosa de reconhecimento de voz.
+
+\subsubsection{Síntese de voz}
+
+
 
 %gspeech/pocketsphynx - speech recognition
 %
 %sound\_play - speech synthesis
+
+
+O uso desta ferramente tem duas grandes vantagens e uma grande desvantagem. As vantagens é que não precisa de ser treinada e é independente da pessoa, i.e., funciona em qualquer pessoa. A desvantagem é que é muito lenta pois a amostra de som tem de se enviada para os servidores da Google qe irão depois retornar uma resposta com o que foi dito e com um grau de certeza.
+
+Como temos o grau de certeza, podemos usar isso estabelecer um /threshold/ para o qual o robõ obedece de imediato a uma acção ou repete o que pensa que recebeu e pergunta se foi realmente isto que foi dito. Um simples 'Yes' ou 'No', à partida, é algo que será sempre reconhecido e reduz acções incorrec
+
 
 \subsection{Visualização}
 
@@ -223,5 +273,3 @@ Three & Four\\
 \hline
 \end{tabular}
 \end{table}
-
-
