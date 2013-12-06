@@ -4,7 +4,7 @@
 \usepackage{cite}
 \usepackage[pdftex]{graphicx}
 \usepackage[cmex10]{amsmath}
-\usepackage[portuguese]{babel}
+%\usepackage[portuguese]{babel}
 \usepackage[utf8]{inputenc}
 %\usepackage{algorithmic}
 %\usepackage{array}
@@ -154,7 +154,7 @@ A interacção com utilizadores foi feita com recurso a reconhecimento e síntes
 
 Para compreender como é que o reconhecimento de voz é realizado é necessário introduzir alguns conceitos importantes. A unidade básica da fala é entendida como um \emph{fone}. Contudo, as características acústicas correspondentes a um fone variam conforme o contexto em que esse fone aparece, a pessoa, etc. Devido a estas variações  utilizam-se subestados dentro de um fone para melhorar o reconhecimento. Usa-se, também, o contexto em que os fones aparecem, o que se irá traduzir num problema de procura do contexto que melhor se aproxima dos dados recebidos. Os fones constróem sílabas. Dependendo das condições de fala, a mesma sílaba correponde a diferenes fones. Palavras restringem considerávelmente a quantidade de fones que se têm de comparar e quanto menor for o dicionário mais rápido será o reconhecimento.
 
-Uma das soluções testadas foi a livraria \textbf{Pocketsphinx} da plataforma Sphinx. Esta livraria, disponível num pacote do ROS com o mesmo nome, está optimizada para portabilidade que é exactamente o que pretendemos na implementação num robô. A plataforma Sphinx utiliza algoritmos extensivamente utilizados em investigação baseados em \textit{Hidden Markov Models} (HMM). Os principais componentes do processo de reconhecimento de voz esão representados na Figura \ref{fig:voicerecprocess}.
+Uma das soluções testadas foi a livraria \textit{Pocketsphinx} da plataforma Sphinx. Esta livraria, disponível num pacote do ROS com o mesmo nome, está optimizada para portabilidade que é exactamente o que pretendemos na implementação num robô. A plataforma Sphinx utiliza algoritmos extensivamente utilizados em investigação baseados em \textit{Hidden Markov Models} (HMM). Os principais componentes do processo de reconhecimento de voz esão representados na Figura \ref{fig:voicerecprocess}.
 
 \begin{figure}[ht]
   \centering
@@ -167,7 +167,7 @@ O audio recebido pelo microfone é convertido em numa sequência de vectores ac�
 
 %fix equation
 \begin{equation}
-  \^{w}=arg_w max \{ P(w|Y) \}
+  \hat{w}=arg_w max \{ P(w|Y) \}
 \label{eq:word_best_match}
 \end{equation}
 
@@ -175,20 +175,20 @@ No entanto, $P(w|Y)$ é difícil de modelar directamente, pelo que se utiliza a 
 
 \begin{eqnarray}
   \label{eq:word_bm_equi}
-   \^{w} = arg_w max \{ p(Y|w) P(w) \}
+   \hat{w} = arg_w max \{ p(Y|w) P(w) \}
 \end{eqnarray}
 
 A verossimilhança $p(Y|w)$ é determinada pelo \emph{modelo acústico} e a probabilidade $P(w)$ é determinada pelo \emph{modelo de linguagem}. Para qualquer palavra $w$, é criado um modelo acústico pela concatenação de modelos fonéticos para criar palavras como elas são definidas num dicionário de pronunciação. Os modelos fonéticos podem ser treinados especificamente para dicionários, ambientes ou contextos específicos. O modelo de lingagem é um modelo em que a probabilidade da palavra $N$ é dependente apenas nos seus $N-1$ antecessores. Os parâmetros no modelo de línguagem são determinados através da contagem da ocorrência das palavras no $corpus$ do texto.
 
 %O reconhecimento é feito a partir de uma amostra que é separada em diferentes partes por silêncios ou pausas e depois tenta-se identificar o que é dito em cada uma dessas partes comparando com todas as combinações de palavras. O resultado é a melhor combinação possível. Esta comparação tem em conta três conceitos importantes. O primeiro é o de \textit{features} - a fala é dividida em pequenas partes (frações de segundo) e de cada parte é exradido um conjunto de números designado por vector de \textit{features}. O segundo é o modelo utilizado - objecto matemático que codifica propriedades da fala, normalmento baseado no especto. Por último, é o processo de procura em si, que pode ser mais ou menos simplificado para devolver resultados em tempos com utilização prática. A forma como o vector de \textit{features} é calculado, o quão o modelo utilizado se aproxima da realidade e o uso ou não de simplificações ou optimizações do processo de procura vão influenciar a qualidade do reconhecimento de fala.
 
-Assim, para o reconhecimento de voz é feito pelo nó \textbf{pocketsphinx}, recebendo como argumentos um dicionário de pronunciações e um modelo de linguagem. Para o nosso projecto modificámos o código original para também aceitar outros modelos acústicos que não o original. Desta forma, podemos carregar um modelo que melhor se adapte à nossa utilização.
+Assim, para o reconhecimento de voz é feito pelo nó \textit{pocketsphinx}, recebendo como argumentos um dicionário de pronunciações e um modelo de linguagem. Para o nosso projecto modificámos o código original para também aceitar outros modelos acústicos que não o original. Desta forma, podemos carregar um modelo que melhor se adapte à nossa utilização.
 
-%A outra solução testada foi um \textit{wraper} do \emph{Google Speech API}. Esta solução tem a grande vantagem de nos dar acesso a uma plataforma poderosa de reconhecimento de voz. O pacote utilizado foi o \textbf{gspeech} que grava uma amostra de audio em formato \emph{FLAC} durante um período de tempo, envia-a para os servidores da Google, recebe a resposta e publica o resultado e o grau de cereza do reconhecimento de voz.
+%A outra solução testada foi um \textit{wraper} do \emph{Google Speech API}. Esta solução tem a grande vantagem de nos dar acesso a uma plataforma poderosa de reconhecimento de voz. O pacote utilizado foi o \textit{gspeech} que grava uma amostra de audio em formato \emph{FLAC} durante um período de tempo, envia-a para os servidores da Google, recebe a resposta e publica o resultado e o grau de cereza do reconhecimento de voz.
 
 \subsubsection{Síntese de voz}
 
-A síntese de voz foi feita com recurso ao pacote \textbf{sound_play} da \textit{stack} \textbf{audio_common}. O algoritmo trata qualquer som (ficheiro \emph{WAV} ou \emph{OGG} ou texto sintetisado) como algo que pode ser reproduzido ou parado. O estado da reprodução de um som pode ser mudado através da publicação para um tópico específico \textbf{robotsound}. O nó \textbf{soundplay_node} é o nó responsável pela reprodução do som. Os restantes nós do pacote servem para fornecer o som a ser reproduzido. O nó que nos dá acesso à síntese de voz é o \textbf{say} que recebe texto por argumento da linha de comandos ou de um texto. O código deste nó foi alterado por forma a receber texto por subscrição a um tópico. A síntese de voz é feita através do \emph{Festival}.
+A síntese de voz foi feita com recurso ao pacote \textit{sound\_play} da \textit{stack} \textit{audio\_common}. O algoritmo trata qualquer som (ficheiro \emph{WAV} ou \emph{OGG} ou texto sintetisado) como algo que pode ser reproduzido ou parado. O estado da reprodução de um som pode ser mudado através da publicação para um tópico específico \textit{robotsound}. O nó \textit{soundplay\_node} é o nó responsável pela reprodução do som. Os restantes nós do pacote servem para fornecer o som a ser reproduzido. O nó que nos dá acesso à síntese de voz é o \textit{say} que recebe texto por argumento da linha de comandos ou de um texto. O código deste nó foi alterado por forma a receber texto por subscrição a um tópico. A síntese de voz é feita através do \emph{Festival}.
 
 \subsection{Visualização}
 
@@ -223,41 +223,41 @@ desired:
 %----------------------------
 
 % Floating figure
-\begin{figure}[!t]
-\centering
-\includegraphics[width=2.5in]{myfigure}
-\caption{Simulation Results.}
-\label{fig_sim}
-\end{figure}
+% \begin{figure}[!t]
+% \centering
+% \includegraphics[width=2.5in]{myfigure}
+% \caption{Simulation Results.}
+% \label{fig_sim}
+% \end{figure}
 
-% Double column floating figure using two subfigures.
-\begin{figure*}[!t]
-\centering
-\subfloat[Case I]{\includegraphics[width=2.5in]{box}%
-\label{fig_first_case}}
-\hfil
-\subfloat[Case II]{\includegraphics[width=2.5in]{box}%
-\label{fig_second_case}}
-\caption{Simulation results.}
-\label{fig_sim}
-\end{figure*}
+% % Double column floating figure using two subfigures.
+% \begin{figure*}[!t]
+% \centering
+% \subfloat[Case I]{\includegraphics[width=2.5in]{box}%
+% \label{fig_first_case}}
+% \hfil
+% \subfloat[Case II]{\includegraphics[width=2.5in]{box}%
+% \label{fig_second_case}}
+% \caption{Simulation results.}
+% \label{fig_sim}
+% \end{figure*}
 
-% Floating table
-\begin{table}[!t]
-% increase table row spacing, adjust to taste
-\renewcommand{\arraystretch}{1.3}
- if using array.sty, it might be a good idea to tweak the value of
- \extrarowheight as needed to properly center the text within the cells
-\caption{An Example of a Table}
-\label{table_example}
-\centering
-% Some packages, such as MDW tools, offer better commands for making tables
-% than the plain LaTeX2e tabular which is used here.
-\begin{tabular}{|c||c|}
-\hline
-One & Two\\
-\hline
-Three & Four\\
-\hline
-\end{tabular}
-\end{table}
+% % Floating table
+% \begin{table}[!t]
+% % increase table row spacing, adjust to taste
+% \renewcommand{\arraystretch}{1.3}
+%  if using array.sty, it might be a good idea to tweak the value of
+%  \extrarowheight as needed to properly center the text within the cells
+% \caption{An Example of a Table}
+% \label{table_example}
+% \centering
+% % Some packages, such as MDW tools, offer better commands for making tables
+% % than the plain LaTeX2e tabular which is used here.
+% \begin{tabular}{|c||c|}
+% \hline
+% One & Two\\
+% \hline
+% Three & Four\\
+% \hline
+% \end{tabular}
+% \end{table}
