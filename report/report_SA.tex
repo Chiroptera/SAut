@@ -226,7 +226,15 @@ The project was developed on the Robot Operating System framework, which is open
 \subsection{Mapeamento}
 \label{sec:results_mapping}
 
-Quando mapeámos apenas dentro da sala o mapa resultante estava de acordo com a realidade. Contudo, quando passámos para o mapeamento dos corredores do quinto piso da Torre Norte do IST, o mapa resultante não correspondia à realidade.
+Quando mapeámos apenas dentro da sala o mapa resultante estava de acordo com a realidade. Contudo, quando passámos para o mapeamento dos corredores do quinto piso da Torre Norte do IST, o mapa resultante não correspondia à realidade, como se pode observar na Figura \ref{fig:badmap}. Durante o processo de mapeamento notou-se que o Pioneer P3-DX utilizado tinha
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=14pc]{badmap.png}
+  \caption{Mapa resultante do mapeamento do quinto piso da Torre Norte.}
+  \label{fig:badmap}
+\end{figure}
+
 
 \subsection{Reconhecimento de voz}
 \label{sec:resuts_recvoice}
@@ -244,6 +252,8 @@ Os nós da síntese de voz reproduziram com sucesso as frases enviadas. O discur
 
 \section{Conclusão}
 % Conclusions (lessons taken, major conclusions, reasons for what went wrong, if anything)
+
+O mapeamento foi algo que não correu como esperado. O mapeamento, por si, é um processo complicado pois estamos a mapear e a localizar simultâneamente. A localização é feita somente através de odometria, tornando-a mais susceptível a erros. Quando o robô anda para a frente e para trás
 
 
 \appendices
