@@ -4,7 +4,6 @@
 \usepackage{cite}
 \usepackage[pdftex]{graphicx}
 \usepackage[cmex10]{amsmath}
-
 \usepackage[utf8]{inputenc}
 %\usepackage{algorithmic}
 %\usepackage{array}
@@ -63,45 +62,51 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 \section{Algoritmos e Implementação}
 %Methods and Algorithms (brief explanation of the methods used and ROS packages/algorithms used - this is mainly to make sure you understood the conceptual and the implementation part, and to introduce notation - do not write like in a book or tutorial paper)
 
+A projecto foi desenvolvido inteiramente sob a plataforma ROS (\textit{Robot Operating System}) com uso de soluções \textit{off-the-shelf}, preferencialmente \textit{open-source}.
+
 \subsection{Mapeamento}
 %gmapping - mapping and SLAM using odometry
 %
 %map\_server - save map and serve map
 
-O mapeamento é um problema complexo pois involve a estimação simultânea da posição do robô e do mapa em seu redor. Os dados recebidos de odometria vão ser utilizados para estimar a posição $x$. Utilizando a posição $x$ e os dados do laser $z$ po
+O mapa utilizado é uma grelha de ocupação, onde cada célula contém um valor binário indicando se está ocupada ou se é um espaço livre:
 
-\begin{eqnarray}
+\begin{equation}
   \label{eq:map_1}
-  d = \{ z_1,...,z_n \} \\
-  \hat{m} = arg_m max \{ P(m|d) \}
-\end{eqnarray}
+  m = \sum_{i} m_i
+\end{equation}
 
-onde $\hat{m}$ é o mapa mais provável. Os dados da odometria são utilizados para estimar a posição $x$ do robô no mapa, que é uma grelha de ocupação.
+Os dados recebidos de odometria vão ser utilizados para estimar a posição $x$. Utilizando a posição $x$ e os dados do laser $z$, é possível integrar estes dados no tempo para obter uma estimativa de cada célula do mapa, i.e. para todas as células do mapa é necessário resolver um problema binárioa resolver por um filtro binário de Bayes. Sabendo todas as leituras e o percurso do robô, o melhor mapa é:
 
-	To do the Mapping of 5 floor, we use the gmapping.
-	\\
-	\\
-	Hokuyo node:
-	\\
-	The Hokuyo node obtain the data of Hokuyo connected to the computer and
-	publishe in topic scan.
-	\\
+\begin{equation}
+  \label{eq:map_2}
+  \hat{m}_i = arg_{m_{i}} max \{ p(m_i|x_{1:t},z_{1:t} \}
+\end{equation}
 
-	Gmapping:
-	\\
-	The gmapping get the information in topics tf and scan. The topic tf transforms necessary to relate frames for laser, base, and odometry. The topic scan transforms Laser scans to create the map from.
-	The gmapping give the topic map for creating the map.
-	\\
+onde $p(m_i)$ é a probabilidade de a célula $m_i$ estar ocupada. Para evitar instabilidades quando as probabilidades estão próximas de zero, usa-se a representação de logaritmica de possibilidades (\textit{log odds}):
 
+\begin{align}
+  \label{eq:logodds}
+  l_{t,i} = log \frac{p(m_i | x_{1:t},z_{1:t})} {1-p(m_i | x_{1:t},z_{1:t})} \\
+  \intertext{com condição inicial}
+  l_{0,i} = log \frac{p(m_i)} {1-p(m_i)} \\
+  \intertext{A probabilidade pode ser extraída através de}
+  p(m_i|x_{1:t},z_{1:t}) = 1- \frac {1} {1+exp(l_{i,t})}
+\end{align}
 
-	Initial Map creating in gmapping
-	\begin{figure}[ht]
-	\centering
-	\includegraphics[width=21pc]{map.jpeg}
-	\caption{Initial Map}
-	\label{fig_env}
-	\end{figure}
-	\\
+O algoritmo \textit{occupancy\_grid\_mapping}, representado na Figura \ref{fig:map_alg} percorre todas as células $m_i$ da grelha e muda as que estão dentro do cone do sensor laser na amostra $z_t$.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=21pc]{map_alg.png}
+  \caption{Algoritmo da grelha de ocupação para mapeamento.}
+  \label{fig:map_alg}
+\end{figure}
+
+A função \textit{inverse\_sensor\_model} implementa $p(m_i | x_t,z_t)$ na representação logaritmica de possibilidades.
+
+O pacote que usámos para o mapeamento foi o \textit{gmapping}. O \textit{gmapping} estimou a posição através dos dados de odometria recebidos do \textit{RosAria}. O laser utilizado foi o Hokuyo URG-04LX-UG01 de curto alcance e utilizámos o pacote \textit{hojuyo\_node} para a leitura de dados.
+
 
 \subsection{Localização}
 
@@ -218,6 +223,10 @@ The project was developed on the Robot Operating System framework, which is open
 \section{Resultados}
 % Experimental Results (show the most relevant results to illustrate the merits and the possible unresoved issues)
 
+\subsection{Mapeamento}
+\label{sec:results_mapping}
+
+Quando mapeámos apenas dentro da sala o mapa resultante estava de acordo com a realidade. Contudo, quando passámos para o mapeamento dos corredores do quinto piso da Torre Norte do IST, o mapa resultante não correspondia à realidade.
 
 \subsection{Reconhecimento de voz}
 \label{sec:resuts_recvoice}
@@ -257,41 +266,41 @@ desired:
 %----------------------------
 
 % Floating figure
-\begin{figure}[!t]
-\centering
-\includegraphics[width=2.5in]{myfigure}
-\caption{Simulation Results.}
-\label{fig_sim}
-\end{figure}
+% \begin{figure}[!t]
+% \centering
+% \includegraphics[width=2.5in]{myfigure}
+% \caption{Simulation Results.}
+% \label{fig_sim}
+% \end{figure}
 
-% Double column floating figure using two subfigures.
-\begin{figure*}[!t]
-\centering
-\subfloat[Case I]{\includegraphics[width=2.5in]{box}%
-\label{fig_first_case}}
-\hfil
-\subfloat[Case II]{\includegraphics[width=2.5in]{box}%
-\label{fig_second_case}}
-\caption{Simulation results.}
-\label{fig_sim}
-\end{figure*}
+% % Double column floating figure using two subfigures.
+% \begin{figure*}[!t]
+% \centering
+% \subfloat[Case I]{\includegraphics[width=2.5in]{box}%
+% \label{fig_first_case}}
+% \hfil
+% \subfloat[Case II]{\includegraphics[width=2.5in]{box}%
+% \label{fig_second_case}}
+% \caption{Simulation results.}
+% \label{fig_sim}
+% \end{figure*}
 
-% Floating table
-\begin{table}[!t]
-% increase table row spacing, adjust to taste
-\renewcommand{\arraystretch}{1.3}
- if using array.sty, it might be a good idea to tweak the value of
- \extrarowheight as needed to properly center the text within the cells
-\caption{An Example of a Table}
-\label{table_example}
-\centering
-% Some packages, such as MDW tools, offer better commands for making tables
-% than the plain LaTeX2e tabular which is used here.
-\begin{tabular}{|c||c|}
-\hline
-One & Two\\
-\hline
-Three & Four\\
-\hline
-\end{tabular}
-\end{table}
+% % Floating table
+% \begin{table}[!t]
+% % increase table row spacing, adjust to taste
+% \renewcommand{\arraystretch}{1.3}
+%  if using array.sty, it might be a good idea to tweak the value of
+%  \extrarowheight as needed to properly center the text within the cells
+% \caption{An Example of a Table}
+% \label{table_example}
+% \centering
+% % Some packages, such as MDW tools, offer better commands for making tables
+% % than the plain LaTeX2e tabular which is used here.
+% \begin{tabular}{|c||c|}
+% \hline
+% One & Two\\
+% \hline
+% Three & Four\\
+% \hline
+% \end{tabular}
+% \end{table}
