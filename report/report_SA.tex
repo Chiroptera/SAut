@@ -184,6 +184,8 @@ A verossimilhança $p(Y|w)$ é determinada pelo \emph{modelo acústico} e a prob
 
 Assim, para o reconhecimento de voz é feito pelo nó \textit{pocketsphinx}, recebendo como argumentos um dicionário de pronunciações e um modelo de linguagem. Para o nosso projecto modificámos o código original para também aceitar outros modelos acústicos que não o original. Desta forma, podemos carregar um modelo que melhor se adapte à nossa utilização.
 
+Apesar de não o termos feito, o desempenho do reconhecimento de voz poderia ter sido melhorado se se tivesse treinado o modelo acústico ou adaptado ao dicionário utilizado.
+
 %A outra solução testada foi um \textit{wraper} do \emph{Google Speech API}. Esta solução tem a grande vantagem de nos dar acesso a uma plataforma poderosa de reconhecimento de voz. O pacote utilizado foi o \textit{gspeech} que grava uma amostra de audio em formato \emph{FLAC} durante um período de tempo, envia-a para os servidores da Google, recebe a resposta e publica o resultado e o grau de cereza do reconhecimento de voz.
 
 \subsubsection{Síntese de voz}
@@ -198,6 +200,18 @@ The project was developed on the Robot Operating System framework, which is open
 
 \section{Resultados}
 % Experimental Results (show the most relevant results to illustrate the merits and the possible unresoved issues)
+
+\subsection{Reconhecimento de voz}
+\label{sec:resuts_recvoice}
+
+Tendo em conta a nossa utilização do robô como recepcionista, o dicionário de pronunciações foi limitado a um pequeno número de palavras. Foram introduzidas algumas palavras de comandos para o robô e as restantes estavam associadas a localizações. Os modelos acústico e fonético utilizados estão adaptados apenas para utilização com língua Inglesa, pelo que os comandos e nomes de localizações escolhidos foram, de igual forma, em língua Inglesa.
+
+O microfone utilizado foi o imbutido num Os resultados que obtivemos foram bastante satisfatórios num ambiente com pouco ruido, mesmo com a utilização de um modelo acústico não adaptado. As palavras \textit{hello}, \textit{yes} e \textit{no} foram quase sempre reconhecidas à primeira e raramente mal intrepretadas por outras palavras. Os nomes das localizações eram mais frequentemente confundidos com outras palavras, mas geralmente não com nomes de outras localizações, pelo que não afectava muito o desempenho do sistema.
+
+\subsection{Síntese de voz}
+\label{sec:results_sintvoice}
+
+Os nós da síntese de voz reproduziram com sucesso as frases enviadas. O discurso, apesar de não natural como o discurso humano, foi perceptível e compreensível. As frases síntetizadas foram \textit{``hello''} quando o robô iniciava ou estava na base, \textit{``where to go''} depois do utilizador expressar intenção em ser guiado pelo robô, \textit{``repeat please''} quando o robô não percebia o que era dito ou não encontrava correspondente nas localizações guardadas, \textit{``want to go anywhere else''} quando o robô chega a um destino que não a base e \textit{``goal was canceled''} quando um objectivo é cancelado.
 
 \section{Conclusão}
 % Conclusions (lessons taken, major conclusions, reasons for what went wrong, if anything)
