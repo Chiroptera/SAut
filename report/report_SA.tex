@@ -4,7 +4,7 @@
 \usepackage{cite}
 \usepackage[pdftex]{graphicx}
 \usepackage[cmex10]{amsmath}
-%\usepackage[portuguese]{babel}
+
 \usepackage[utf8]{inputenc}
 %\usepackage{algorithmic}
 %\usepackage{array}
@@ -48,7 +48,7 @@ Pioneer P5-DX, ROS, autónomo.
 
 Os requisitos para do nosso projecto exigiam ter um robô Pioneer P3-DX capaz de executar tarefas modeladas por uma máquina de estados finitos. Essas tarefas incluem o robô ser capaz de mapear, auto-localiza-se e navegar o seu ambiente e deslocar-se para diferentes localizações indicadas através de interação com utilizadores.
 
-A nossa motivação foi ter um robô recepcionista capaz de receber visitantes num edifício, e.g. um bloco de escritórios. O robô seria capaz de mapear o edício \emph{a priori} para futura utilização, de receber um conjunto de coordenadas já conhecidas (e.g. escritórios de certas pessoas) associadas a palavras-chave, de interagir com utilizadores através de síntese e reconhecimento de voz e, por fim, de guiar os mesmos aos seus destinos.
+A nossa motivação foi ter um robô recepcionista capaz de receber visitantes num edifício, e.g. um bloco de escritórios. O robô seria capaz de mapear o edifício \emph{a priori} para futura utilização, de receber um conjunto de coordenadas já conhecidas (e.g. escritórios de certas pessoas) associadas a palavras-chave, de interagir com utilizadores através de síntese e reconhecimento de voz e, por fim, de guiar os mesmos aos seus destinos.
 
 Durante a implementação do projecto simplificámos algumas destas funcionalidades, nomeadamente o mapeamento e o reconhecimento de voz. O mapeamento foi executado apenas no quinto piso da Torre Norte do IST. O reconhecimento de voz foi restringido a um pequenos dicionário para reduzir a complexidade e a necessidade de adaptar modelos acústicos e treinamento.
 
@@ -68,6 +68,16 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 %
 %map\_server - save map and serve map
 
+O mapeamento é um problema complexo pois involve a estimação simultânea da posição do robô e do mapa em seu redor. Os dados recebidos de odometria vão ser utilizados para estimar a posição $x$. Utilizando a posição $x$ e os dados do laser $z$ po
+
+\begin{eqnarray}
+  \label{eq:map_1}
+  d = \{ z_1,...,z_n \} \\
+  \hat{m} = arg_m max \{ P(m|d) \}
+\end{eqnarray}
+
+onde $\hat{m}$ é o mapa mais provável. Os dados da odometria são utilizados para estimar a posição $x$ do robô no mapa, que é uma grelha de ocupação.
+
 	To do the Mapping of 5 floor, we use the gmapping.
 	\\
 	\\
@@ -85,7 +95,7 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 
 
 	Initial Map creating in gmapping
-	\begin{figure}[[ht]]
+	\begin{figure}[ht]
 	\centering
 	\includegraphics[width=21pc]{map.jpeg}
 	\caption{Initial Map}
@@ -134,17 +144,22 @@ Durante a implementação do projecto simplificámos algumas destas funcionalida
 
 \subsection{Execução do Plano Coordenado}
 
-%smach - finite state automaton
-% - actionlib
+Para conseguir coordenar as acções do robô de maneira a executar a tarefa proposta, é necessário ter uma representação abstracta dessa mesma tarefa. O robô recepcionista é um sistema sequencial, ou seja, executa uma acção de cada vez -- ou mover-se para uma posição-alvo ou interagir com o utilizador para adquirir esse objectivo. Para tais sistemas, o fluxo de controlo é usualmente especificado recorrendo a uma Máquina de Estados Finitos (MEF).
+Uma MEF é então implementada no nó \textit{p3dx\_smach}, usando o pacote \textit{smach}. A tarefa do robô é dividida em três estados de execução: INITIAL, TO\_GOAL e GET\_GOAL. A Figura~\ref{fig: maquina_estados}, gerada pelo nó \textit{smach\_viewer}, ilustra a forma como o controlo flui entre os estados. De seguida explica-se o funcionamento de cada estado.
 
-In order to coordinate the robot's actions, an abstract representation of the task to be carried out is needed. The receptionist robot is a sequential system, \textit{i.e.}, it performs one action at a time -- either moving to a target location or interacting with a user to acquire one. For such a system, a State Machine (SM), or Finite State Automaton (FSA) is usually used to specify the control flow through the system.
+\begin{figure}[ht]
+	\centering
+	\includegraphics[height=7cm]{state_machine}
+	\caption{Fluxo de execução da máquina de estados.}
+	\label{fig: maquina_estados}
+\end{figure}
 
-A SM is implemented using the \textit{smach} package. The task of the robot is divided into three states:
-\begin{itemize}
-	\item INITIAL
-	\item TO\_GOAL
-	\item GET\_GOAL
-\end{itemize}
+\subsubsection{INITIAL} Estado inicial. O nó verifica se os ficheiros relativos ao mapa (\textit{.pmg} e \textit{.yaml}) estão presentes e lê o ficheiro de texto com as especificações dos diferentes locais de interesse (\textit{setpoints}), guardando-os num dicionário. Caso ocorra alguma erro neste processo , retorna-se \textit{error} e a execução é interrompida. Caso contrário, restorna-se \textit{ready} e o controlo é passado ao estado \textit{TO\_GOAL}, com instruções para levar o robô até à base. Neste projecto, a posição base é em frente aos elevadores. Numa aplicação geral, esta seria, por exemplo, a entrada de um edifício.
+
+\subsubsection{TO\_GOAL} Este estado recebe como argumento do estado anterior o identificador da posiçao-alvo. De seguida procura esse identificador no dicionário de \textit{setpoints} para obter as coordenadas e orientação correspondentes. Por último, uma ordem é enviada para o nó de navegação \textit{move\_base}, usando um cliente de acção criado com o pacote \textit{actionlib}. O servidor de acção encontra-se já implementado na \textit{stack} de navegação, pelo nó \textit{move\_base\_msgs}. O controlo é mantido até que o objectivo seja alcançado ou cancelado pelo utilizador, sendo então passado para o estado \textit{GET\_GOAL}, com vista a determinar a próxima directiva. São também passados argumentos que indicam qual foi o objectivo perseguido e se este foi alcançado ou cancelado. Mais uma vez, caso ocorra algum erro no processo, como o robô se perca ou o caminho se encontre bloqueado, este estado retorna \textit{error} e a execução é interrompida.
+
+\subsubsection{GET\_GOAL} À excepção do primeiro objectivo, que é invariavelmente a base, as posições alvo têm de ser determinadas pro interacção com o utilizador. \textit{GET\_GOAL} encarrega-se dessa tarefa, recorrendo aos nós de reconhecimento de fala (\textit{pocketsphinx}) e de síntese de voz (\textit{say}). Caso o robô se encontre na base -- o que pode ser determinado pelos argumentos fornecidos por \textit{TO\_GOAL} -- o robô simplesmente aguarda que um utilizador inicie a interacção, voltando a executar o mesmo estado se nenhum objectivo for transmitido. Caso contrário, o pŕoprio robô pede ao utilizador um novo objectivo, ordenando o retorno à base se este recusar ou o ignorar durante um certo período de tempo.
+
 
 \subsection{Interacção com o utilizador}
 
@@ -167,14 +182,15 @@ O audio recebido pelo microfone é convertido em numa sequência de vectores ac�
 
 %fix equation
 \begin{equation}
+\label{eq:word_bestmatch}
   \hat{w}=arg_w max \{ P(w|Y) \}
-\label{eq:word_best_match}
 \end{equation}
 
-No entanto, $P(w|Y)$ é difícil de modelar directamente, pelo que se utiliza a regra de Bayes para transformar \ref{eq:word_best_match} no equivalente:
+No entanto, $P(w|Y)$ é difícil de modelar directamente, pelo que se utiliza a regra de Bayes para transformar (\ref{eq:word_bestmatch})
+ no equivalente:
 
 \begin{eqnarray}
-  \label{eq:word_bm_equi}
+  \label{eq:word_bestmatch_equi}
    \hat{w} = arg_w max \{ p(Y|w) P(w) \}
 \end{eqnarray}
 
@@ -192,6 +208,7 @@ Apesar de não o termos feito, o desempenho do reconhecimento de voz poderia ter
 
 A síntese de voz foi feita com recurso ao pacote \textit{sound\_play} da \textit{stack} \textit{audio\_common}. O algoritmo trata qualquer som (ficheiro \emph{WAV} ou \emph{OGG} ou texto sintetisado) como algo que pode ser reproduzido ou parado. O estado da reprodução de um som pode ser mudado através da publicação para um tópico específico \textit{robotsound}. O nó \textit{soundplay\_node} é o nó responsável pela reprodução do som. Os restantes nós do pacote servem para fornecer o som a ser reproduzido. O nó que nos dá acesso à síntese de voz é o \textit{say} que recebe texto por argumento da linha de comandos ou de um texto. O código deste nó foi alterado por forma a receber texto por subscrição a um tópico. A síntese de voz é feita através do \emph{Festival}.
 
+
 \subsection{Visualização}
 
 %Rviz - visualization
@@ -200,6 +217,7 @@ The project was developed on the Robot Operating System framework, which is open
 
 \section{Resultados}
 % Experimental Results (show the most relevant results to illustrate the merits and the possible unresoved issues)
+
 
 \subsection{Reconhecimento de voz}
 \label{sec:resuts_recvoice}
@@ -212,6 +230,8 @@ O microfone utilizado foi o imbutido num Os resultados que obtivemos foram basta
 \label{sec:results_sintvoice}
 
 Os nós da síntese de voz reproduziram com sucesso as frases enviadas. O discurso, apesar de não natural como o discurso humano, foi perceptível e compreensível. As frases síntetizadas foram \textit{``hello''} quando o robô iniciava ou estava na base, \textit{``where to go''} depois do utilizador expressar intenção em ser guiado pelo robô, \textit{``repeat please''} quando o robô não percebia o que era dito ou não encontrava correspondente nas localizações guardadas, \textit{``want to go anywhere else''} quando o robô chega a um destino que não a base e \textit{``goal was canceled''} quando um objectivo é cancelado.
+
+
 
 \section{Conclusão}
 % Conclusions (lessons taken, major conclusions, reasons for what went wrong, if anything)
@@ -237,41 +257,41 @@ desired:
 %----------------------------
 
 % Floating figure
-% \begin{figure}[!t]
-% \centering
-% \includegraphics[width=2.5in]{myfigure}
-% \caption{Simulation Results.}
-% \label{fig_sim}
-% \end{figure}
+\begin{figure}[!t]
+\centering
+\includegraphics[width=2.5in]{myfigure}
+\caption{Simulation Results.}
+\label{fig_sim}
+\end{figure}
 
-% % Double column floating figure using two subfigures.
-% \begin{figure*}[!t]
-% \centering
-% \subfloat[Case I]{\includegraphics[width=2.5in]{box}%
-% \label{fig_first_case}}
-% \hfil
-% \subfloat[Case II]{\includegraphics[width=2.5in]{box}%
-% \label{fig_second_case}}
-% \caption{Simulation results.}
-% \label{fig_sim}
-% \end{figure*}
+% Double column floating figure using two subfigures.
+\begin{figure*}[!t]
+\centering
+\subfloat[Case I]{\includegraphics[width=2.5in]{box}%
+\label{fig_first_case}}
+\hfil
+\subfloat[Case II]{\includegraphics[width=2.5in]{box}%
+\label{fig_second_case}}
+\caption{Simulation results.}
+\label{fig_sim}
+\end{figure*}
 
-% % Floating table
-% \begin{table}[!t]
-% % increase table row spacing, adjust to taste
-% \renewcommand{\arraystretch}{1.3}
-%  if using array.sty, it might be a good idea to tweak the value of
-%  \extrarowheight as needed to properly center the text within the cells
-% \caption{An Example of a Table}
-% \label{table_example}
-% \centering
-% % Some packages, such as MDW tools, offer better commands for making tables
-% % than the plain LaTeX2e tabular which is used here.
-% \begin{tabular}{|c||c|}
-% \hline
-% One & Two\\
-% \hline
-% Three & Four\\
-% \hline
-% \end{tabular}
-% \end{table}
+% Floating table
+\begin{table}[!t]
+% increase table row spacing, adjust to taste
+\renewcommand{\arraystretch}{1.3}
+ if using array.sty, it might be a good idea to tweak the value of
+ \extrarowheight as needed to properly center the text within the cells
+\caption{An Example of a Table}
+\label{table_example}
+\centering
+% Some packages, such as MDW tools, offer better commands for making tables
+% than the plain LaTeX2e tabular which is used here.
+\begin{tabular}{|c||c|}
+\hline
+One & Two\\
+\hline
+Three & Four\\
+\hline
+\end{tabular}
+\end{table}
